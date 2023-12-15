@@ -4,13 +4,16 @@ This project is a GitHub CLI (`gh`) extension that provides commands for interac
 - Verifying if a secret is valid (for select providers)
 
 # Pre-requisites
-- [GitHub CLI](https://cli.github.com/)
+- [GitHub CLI](https://github.com/cli/cli#installation)
+- GitHub Enterprise Server 3.7+ or GitHub Enterprise Cloud
 
 # Installation
 
 ```bash
-gh extension install CallMeGreg/secret-scanning-alerts
+gh extension install CallMeGreg/gh-secret-scanning
 ```
 
 # Usage
-TBD
+Authenticate to GitHub Enterprise Server or GitHub Enterprise Cloud using `gh auth login`
+
+Then, run `gh secret-scanning --help` to see the available commands.
