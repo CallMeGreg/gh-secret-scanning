@@ -35,10 +35,6 @@ List secret scanning alerts for a repository:
 gh secret-scanning alerts -r <repository>
 ```
 
-## Verify subcommand
-
-:construction: This command is under development and not yet available.
-
 ## Help
 See available commands and flags by running:
 ```bash
