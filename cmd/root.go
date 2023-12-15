@@ -6,7 +6,7 @@ import (
 	"github.com/cli/go-gh/v2/pkg/api"
 )
 
-func main() {
+func root() {
 	fmt.Println("hi world, this is the gh-secret-scanning extension!")
 	client, err := api.DefaultRESTClient()
 	if err != nil {
