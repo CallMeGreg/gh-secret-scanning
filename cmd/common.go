@@ -193,7 +193,6 @@ func findNextPage(nextPageLink string) (string, bool) {
 		}
 	}
 	return "", false
-
 }
 
 func validateProvider(provider string) (err error) {
@@ -220,4 +219,41 @@ func sortAlerts(alerts []Alerts) []Alerts {
 		return alerts[i].Repository.Full_name < alerts[j].Repository.Full_name
 	})
 	return alerts
+}
+
+func getSecretTypeParameter() (secret_type_param string) {
+	if provider != "" {
+		secret_type_param = strings.Join(ProviderTokenMapping[provider], ",")
+	} else {
+		keys := make([]string, 0, len(ProviderTokenMapping))
+		for k := range ProviderTokenMapping {
+			keys = append(keys, k)
+		}
+		for i := 0; i < len(ProviderTokenMapping); i++ {
+			secret_type_param += strings.Join(ProviderTokenMapping[keys[i]], ",")
+			if i < len(ProviderTokenMapping)-1 {
+				secret_type_param += ","
+			}
+		}
+	}
+	return secret_type_param
+}
+
+func getScopeAndTarget() (scope string, target string, err error) {
+	if enterprise != "" {
+		scope = "enterprise"
+		target = enterprise
+	} else if organization != "" {
+		scope = "organization"
+		target = organization
+	} else if repository != "" {
+		scope = "repository"
+		target = repository
+	}
+	return scope, target, err
+}
+
+func verifyAlert(alert Alerts) (err error) {
+
+	return
 }

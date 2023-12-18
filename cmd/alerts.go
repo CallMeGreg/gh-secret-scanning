@@ -26,19 +26,10 @@ var alertsCmd = &cobra.Command{
 
 func runAlerts(cmd *cobra.Command, args []string) (err error) {
 	// set scope & target based on the flag that was used:
-	var scope string
-	var target string
-	if enterprise != "" {
-		scope = "enterprise"
-		target = enterprise
-	} else if organization != "" {
-		scope = "organization"
-		target = organization
-	} else if repository != "" {
-		scope = "repository"
-		target = repository
-	} else {
-		fmt.Println("No enterprise/organization/repository specified.")
+	// set scope & target based on the flag that was used:
+	scope, target, err := getScopeAndTarget()
+	if err != nil {
+		fmt.Println(err)
 		return
 	}
 
@@ -49,21 +40,20 @@ func runAlerts(cmd *cobra.Command, args []string) (err error) {
 		return
 	}
 
-	// Update the URL to include the per_page query parameter:
+	// update the URL to include query parameters based on specified flags:
 	parsedURL, err := url.Parse(requestPath)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
-	// Set the query parameters
 	values := parsedURL.Query()
 	values.Set("per_page", per_page)
+	// if provider was specified, filter results. Otherwise, return all results:
 	secret_type := strings.Join(ProviderTokenMapping[provider], ",")
 	values.Set("secret_type", secret_type)
 	parsedURL.RawQuery = values.Encode()
 
-	// Update the request path
+	// update the request path
 	requestPath = parsedURL.String()
 
 	// loop through calls to the API until all pages of results have been fetched or limit has been reached:
@@ -74,7 +64,6 @@ func runAlerts(cmd *cobra.Command, args []string) (err error) {
 		log.Printf("Processing page: %d\n", page)
 		_, nextPage, err := callApi(requestPath, &pageOfSecretAlerts, GET)
 		if err != nil {
-			// check if the error is a 404
 			log.Printf("ERROR: Unable to get alerts for target: %s\n", requestPath)
 			return err
 		}
@@ -145,8 +134,11 @@ func runAlerts(cmd *cobra.Command, args []string) (err error) {
 			log.Fatal(err)
 		}
 	}
-	fmt.Println(Blue("Evaluated " + strconv.Itoa(len(sortedAlerts)) + " secret alerts."))
-
+	if limit < len(sortedAlerts) {
+		fmt.Println(Blue("Fetched " + strconv.Itoa(limit) + " secret alerts."))
+	} else {
+		fmt.Println(Blue("Fetched " + strconv.Itoa(len(sortedAlerts)) + " secret alerts."))
+	}
 	// optionally generate a csv report of the results:
 	if len(sortedAlerts) > 0 && csvReport {
 		fmt.Println(Blue("Generating CSV report..."))
@@ -154,10 +146,10 @@ func runAlerts(cmd *cobra.Command, args []string) (err error) {
 		counter = 0
 		// get current date & time:
 		now := time.Now()
-		timestamp := now.Format("2006-01-02_15-04-05")
-		filename := "secret-scanning-report-" + timestamp + ".csv"
+		timestamp := now.Format("2006-01-02 15-04-05")
+		filename := "Secret Scanning Report - " + target + " " + scope + " - " + timestamp + ".csv"
 		if provider != "" {
-			filename = "secret-scanning-report-" + provider + "-" + timestamp + ".csv"
+			filename = "Secret Scanning Report - " + provider + " tokens - " + target + " " + scope + " - " + timestamp + ".csv"
 		}
 		// Create a CSV file
 		file, err := os.Create(filename)
