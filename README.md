@@ -57,14 +57,17 @@ Available Commands:
   help        Help about any command
 
 Flags:
+  -c, --csv                   Generate a csv report of the results
   -e, --enterprise string     GitHub enterprise slug
   -h, --help                  help for secret-scanning
-  -l, --limit int             Limit the number of secrets processed (default 20)
+  -l, --limit int             Limit the number of secrets processed (default 30)
   -o, --organization string   GitHub organization slug
   -p, --provider string       Filter for a specific secret provider
+  -q, --quiet                 Minimize output to the console
   -r, --repository string     GitHub owner/repository slug
   -s, --show-secret           Display secret values
   -u, --url string            GitHub host to connect to (default "github.com")
+  -v, --verbose               Generate verbose output
 
 Use "secret-scanning [command] --help" for more information about a command.
 ```
