@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+	"log"
+
 	"github.com/spf13/cobra"
 )
 
@@ -11,6 +14,9 @@ var repository string
 var provider string
 var limit int
 var secret bool
+var csvReport bool
+var verbose bool
+var quiet bool
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&host, "url", "u", "github.com", "GitHub host to connect to")
@@ -18,8 +24,11 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&organization, "organization", "o", "", "GitHub organization slug")
 	rootCmd.PersistentFlags().StringVarP(&repository, "repository", "r", "", "GitHub owner/repository slug")
 	rootCmd.PersistentFlags().StringVarP(&provider, "provider", "p", "", "Filter for a specific secret provider")
-	rootCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 20, "Limit the number of secrets processed")
-	rootCmd.PersistentFlags().BoolVarP(&secret, "secret", "s", false, "Display secret value")
+	rootCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 30, "Limit the number of secrets processed")
+	rootCmd.PersistentFlags().BoolVarP(&secret, "show-secret", "s", false, "Display secret values")
+	rootCmd.PersistentFlags().BoolVarP(&csvReport, "csv", "c", false, "Generate a csv report of the results")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Generate verbose output")
+	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Minimize output to the console")
 
 	// require exactly one (1) choice of enterprise, organization, or repository:
 	rootCmd.MarkFlagsMutuallyExclusive("enterprise", "organization", "repository")
@@ -27,6 +36,25 @@ func init() {
 
 	// disable completion subcommand:
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
+
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) (err error) {
+		// warn user about --show-secret flag:
+		if secret {
+			fmt.Println(Yellow("WARNING: --show-secret flag is enabled. Full secret values will be displayed in PLAIN TEXT in the output. Would you like to continue? (y/n)"))
+			var response string
+			fmt.Scanln(&response)
+			if response != "y" {
+				log.Fatal("Exiting...")
+			}
+		}
+
+		// check if provider is in supportedProviders:
+		if provider != "" {
+			validateProvider(provider)
+		}
+		return
+	}
+
 }
 
 var rootCmd = &cobra.Command{

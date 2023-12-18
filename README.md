@@ -35,6 +35,11 @@ List secret scanning alerts for a repository:
 gh secret-scanning alerts -r <repository>
 ```
 
+Add flags to specify a GHES server, limit the number of secrets processed, filter for a specific secret provider, display the secret values, and generate a csv report:
+```bash
+gh secret-scanning alerts -u callmegreg-02c6a8a1b5d81e463.ghe-test.org -e github -l 100 -p slack -s -c
+```
+
 ## Help
 See available commands and flags by running:
 ```bash
@@ -42,6 +47,8 @@ gh secret-scanning -h
 ```
 
 ```
+Interact with secret scanning alerts for a GHEC or GHES 3.7+ enterprise, organization, or repository
+
 Usage:
   secret-scanning [command]
 
@@ -56,7 +63,7 @@ Flags:
   -o, --organization string   GitHub organization slug
   -p, --provider string       Filter for a specific secret provider
   -r, --repository string     GitHub owner/repository slug
-  -s, --secret                Display secret value
+  -s, --show-secret           Display secret values
   -u, --url string            GitHub host to connect to (default "github.com")
 
 Use "secret-scanning [command] --help" for more information about a command.
