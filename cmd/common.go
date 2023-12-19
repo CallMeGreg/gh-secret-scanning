@@ -206,12 +206,6 @@ func validateProvider(provider string) (err error) {
 }
 
 func sortAlerts(alerts []Alert) []Alert {
-	// handle repo name for repo endpoint which doesn't return the repo name field
-	if repository != "" {
-		for i := range alerts {
-			alerts[i].Repository.Full_name = repository
-		}
-	}
 	// sort alerts by repo name and then alert number
 	sort.Slice(alerts, func(i, j int) bool {
 		if alerts[i].Repository.Full_name == alerts[j].Repository.Full_name {
@@ -219,6 +213,14 @@ func sortAlerts(alerts []Alert) []Alert {
 		}
 		return alerts[i].Repository.Full_name < alerts[j].Repository.Full_name
 	})
+	return alerts
+}
+
+func addRepoFullNameToAlerts(alerts []Alert) []Alert {
+	// handle repo name for repo endpoint which doesn't return the repo name field
+	for i := range alerts {
+		alerts[i].Repository.Full_name = repository
+	}
 	return alerts
 }
 

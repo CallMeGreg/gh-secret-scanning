@@ -35,9 +35,9 @@ List secret scanning alerts for a repository:
 gh secret-scanning alerts -r <repository>
 ```
 
-Add flags to specify a GHES server, limit the number of secrets processed, filter for a specific secret provider, display the secret values, and generate a csv report:
+Add flags to specify a GHES server, limit the number of secrets processed, filter for a specific secret provider, display the secret values, generate a csv report, include extra fields, and more:
 ```bash
-gh secret-scanning alerts -u callmegreg-02c6a8a1b5d81e463.ghe-test.org -e github -l 100 -p slack -s -c
+gh secret-scanning alerts -e github -u my-github-server.com -l 10 -p slack -s -c -v
 ```
 
 ## Help

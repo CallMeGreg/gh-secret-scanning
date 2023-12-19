@@ -87,6 +87,11 @@ func runAlerts(cmd *cobra.Command, args []string) (err error) {
 	// sort allSecretAlerts by repository name, and then by secret alert ID:
 	sortedAlerts := sortAlerts(allSecretAlerts)
 
+	// if a specific repo endpoint was targeted, add the repo field to the alerts:
+	if repository != "" {
+		addRepoFullNameToAlerts(sortedAlerts)
+	}
+
 	// pretty print all of the response details:
 	counter := 0
 	if len(sortedAlerts) > 0 && !quiet {
@@ -151,10 +156,7 @@ func runAlerts(cmd *cobra.Command, args []string) (err error) {
 		// get current date & time:
 		now := time.Now()
 		timestamp := now.Format("2006-01-02 15-04-05")
-		filename := "Secret Scanning Report - " + target + " " + scope + " - " + timestamp + ".csv"
-		if provider != "" {
-			filename = "Secret Scanning Report - " + provider + " tokens - " + target + " " + scope + " - " + timestamp + ".csv"
-		}
+		filename := "Secret Scanning Report - " + scope + " - " + timestamp + ".csv"
 		// Create a CSV file
 		file, err := os.Create(filename)
 		if err != nil {
