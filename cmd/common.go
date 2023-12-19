@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,8 +12,12 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/cli/go-gh/pkg/tableprinter"
+	"github.com/cli/go-gh/pkg/term"
 	"github.com/cli/go-gh/v2/pkg/api"
 )
 
@@ -44,7 +49,6 @@ type Alert struct {
 	Push_protection_bypassed_by User       `json:"push_protection_bypassed_by"`
 	Validity_boolean            bool       `json:"validity_boolean"`
 	Validity_response_code      string     `json:"validity_response_code"`
-	Validity_response_body      string     `json:"validity_response_body"`
 }
 
 type HttpMethod int
@@ -121,14 +125,7 @@ func setOptions() api.ClientOptions {
 	return opts
 }
 
-func callApi(requestPath string, parseType interface{}, method HttpMethod, postBody ...[]byte) (int, string, error) {
-	opts := setOptions()
-	client, err := api.NewRESTClient(opts)
-	if err != nil {
-		fmt.Println(err)
-		return 0, "", err
-	}
-
+func callApi(client *api.RESTClient, requestPath string, parseType interface{}, method HttpMethod, postBody ...[]byte) (int, string, error) {
 	var httpMethod string
 	switch method {
 	case POST:
@@ -194,14 +191,17 @@ func findNextPage(nextPageLink string) (string, bool) {
 }
 
 func validateProvider(provider string) (err error) {
-	providerList := MainRegistry.GetProviders()
-	providers := MainRegistry.Providers
-	for _, item := range providers {
-		if strings.ToLower(item.Name) == strings.ToLower(provider) {
+	// get top level keys from SupportedProviders map:
+	var providerList []string
+	for key := range SupportedProviders {
+		providerList = append(providerList, key)
+	}
+	for _, item := range providerList {
+		if strings.ToLower(item) == strings.ToLower(provider) {
 			return nil
 		}
 	}
-	err = fmt.Errorf(Red("Invalid provider: " + provider + "\nValid providers are: " + providerList))
+	err = fmt.Errorf(Red("Invalid provider: " + provider + "\nValid providers are: " + strings.Join(providerList, ", ")))
 	return err
 }
 
@@ -227,16 +227,21 @@ func addRepoFullNameToAlerts(alerts []Alert) []Alert {
 func getSecretTypeParameter() (secret_type_param string) {
 	// if provider was specified, only return the secret types for that provider:
 	if provider != "" {
-		for _, item := range MainRegistry.Providers {
-			if strings.ToLower(item.Name) == strings.ToLower(provider) {
-				secret_type_param = item.GetTokenTypes()
+		// get keys for SupportedProviders[provider] map:
+		var secret_types []string
+		for key := range SupportedProviders[provider] {
+			secret_types = append(secret_types, key)
+		}
+		secret_type_param = strings.Join(secret_types, ",")
+	} else {
+		// get keys for every SupportedProvider key:
+		var secret_types []string
+		for _, supported_provider := range SupportedProviders {
+			for key := range supported_provider {
+				secret_types = append(secret_types, key)
 			}
 		}
-	} else {
-		// otherwise return all validation-supported secret types:
-		for _, item := range MainRegistry.Providers {
-			secret_type_param = secret_type_param + item.GetTokenTypes() + ","
-		}
+		secret_type_param = strings.Join(secret_types, ",")
 	}
 	return secret_type_param
 }
@@ -255,7 +260,155 @@ func getScopeAndTarget() (scope string, target string, err error) {
 	return scope, target, err
 }
 
-func verifyAlert(alert Alert) (err error) {
+func prettyPrintAlerts(alerts []Alert, validity_check bool) {
+	counter := 0
+	if len(alerts) > 0 {
+		terminal := term.FromEnv()
+		termWidth, _, _ := terminal.Size()
+		t := tableprinter.New(terminal.Out(), terminal.IsTerminalOutput(), termWidth)
+		t.AddField("Repository", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+		t.AddField("ID", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+		t.AddField("State", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+		t.AddField("Secret Type", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+		if secret {
+			t.AddField("Secret", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+		}
+		if validity_check {
+			t.AddField("Confirmed Valid", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+			t.AddField("Validity Check Status Code", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+		}
+		if verbose {
+			t.AddField("Created At", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+			t.AddField("Resolution", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+			t.AddField("Resolved At", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+			t.AddField("Resolved By", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+			t.AddField("Push Protection Bypassed", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+			t.AddField("Push Protection Bypassed At", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+			t.AddField("Push Protection Bypassed By", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+			t.AddField("URL", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+		}
+		t.EndRow()
 
-	return
+		for counter < len(alerts) && counter < limit {
+			alert := alerts[counter]
+			t.AddField(alert.Repository.Full_name, tableprinter.WithTruncate(nil))
+			t.AddField(strconv.Itoa(alert.Number), tableprinter.WithTruncate(nil))
+			t.AddField(alert.State, tableprinter.WithTruncate(nil))
+			t.AddField(alert.Secret_type, tableprinter.WithTruncate(nil))
+			if secret {
+				t.AddField(alert.Secret, tableprinter.WithTruncate(nil))
+			}
+			if validity_check {
+				t.AddField(strconv.FormatBool(alert.Validity_boolean), tableprinter.WithTruncate(nil))
+				t.AddField(alert.Validity_response_code, tableprinter.WithTruncate(nil))
+			}
+			if verbose {
+				t.AddField(alert.Created_at, tableprinter.WithTruncate(nil))
+				t.AddField(alert.Resolution, tableprinter.WithTruncate(nil))
+				t.AddField(alert.Resolved_at, tableprinter.WithTruncate(nil))
+				t.AddField(alert.Resolved_by.Login, tableprinter.WithTruncate(nil))
+				t.AddField(strconv.FormatBool(alert.Push_protection_bypassed), tableprinter.WithTruncate(nil))
+				t.AddField(alert.Push_protection_bypassed_at, tableprinter.WithTruncate(nil))
+				t.AddField(alert.Push_protection_bypassed_by.Login, tableprinter.WithTruncate(nil))
+				t.AddField(alert.HTML_URL, tableprinter.WithTruncate(nil))
+			}
+			t.EndRow()
+			counter++
+		}
+		if err := t.Render(); err != nil {
+			log.Fatal(err)
+		}
+	}
+	if limit < len(alerts) {
+		fmt.Println(Blue("Fetched " + strconv.Itoa(limit) + " secret alerts."))
+	} else {
+		fmt.Println(Blue("Fetched " + strconv.Itoa(len(alerts)) + " secret alerts."))
+	}
+}
+
+func generateCSVReport(alerts []Alert, scope string) (err error) {
+	fmt.Println(Blue("Generating CSV report..."))
+	// reset counter
+	counter := 0
+	// get current date & time:
+	now := time.Now()
+	timestamp := now.Format("2006-01-02 15-04-05")
+	filename := "Secret Scanning Report - " + scope + " - " + timestamp + ".csv"
+	// Create a CSV file
+	file, err := os.Create(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	// Initialize CSV writer
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+	// Write headers to CSV file
+	headers := []string{"Repository", "ID", "State", "Secret Type"}
+	if secret {
+		headers = append(headers, "Secret")
+	}
+	if verbose {
+		headers = append(headers, "Created At", "Resolution", "Resolved At", "Resolved By", "Push Protection Bypassed", "Push Protection Bypassed At", "Push Protection Bypassed By", "URL")
+	}
+	writer.Write(headers)
+	// Write data to CSV file
+	for counter < len(alerts) && counter < limit {
+		alert := alerts[counter]
+		row := []string{alert.Repository.Full_name, strconv.Itoa(alert.Number), alert.State, alert.Secret_type}
+		if secret {
+			row = append(row, alert.Secret)
+		}
+		if verbose {
+			row = append(row, alert.Created_at, alert.Resolution, alert.Resolved_at, alert.Resolved_by.Login, strconv.FormatBool(alert.Push_protection_bypassed), alert.Push_protection_bypassed_at, alert.Push_protection_bypassed_by.Login, alert.HTML_URL)
+		}
+		writer.Write(row)
+		counter++
+	}
+	if err := writer.Error(); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(Blue("CSV report generated: " + filename))
+	return err
+}
+
+func verifyAlert(alert Alert) (status_code int, err error) {
+	// verify that the alert is valid by making a request to its validation endpoint:
+	provider := strings.Split(alert.Secret_type, "_")[0]
+	secret_type := alert.Secret_type
+	secret_validation_endpoint := SupportedProviders[provider][secret_type]["ValidationEndpoint"]
+	secret_validation_method := SupportedProviders[provider][secret_type]["HttpMethod"]
+	secret_validation_content_type := SupportedProviders[provider][secret_type]["ContentType"]
+	auth_header := "Bearer " + alert.Secret
+
+	// create a new client for the validation request:
+	var opts api.ClientOptions
+	opts.AuthToken = auth_header
+	client, err := api.NewHTTPClient(opts)
+	if err != nil {
+		log.Println("ERROR: Unable to create HTTP client")
+		return 0, err
+	}
+	// send a request to the validation endpoint:
+	var response *http.Response
+	var body io.Reader
+	if secret_validation_method == "POST" {
+		response, err := client.Post(secret_validation_endpoint, secret_validation_content_type, body)
+		if err != nil {
+			log.Println("ERROR: Unable to send " + secret_validation_method + " request to " + secret_validation_endpoint)
+			return response.StatusCode, err
+		}
+		defer response.Body.Close()
+	} else if secret_validation_method == "GET" {
+		response, err := client.Get(secret_validation_endpoint)
+		if err != nil {
+			log.Println("ERROR: Unable to send " + secret_validation_method + " request to " + secret_validation_endpoint)
+			return response.StatusCode, err
+		}
+		return response.StatusCode, nil
+	} else {
+		log.Println("ERROR: Invalid HTTP method for validation endpoint")
+		return 0, err
+	}
+	return response.StatusCode, err
 }
