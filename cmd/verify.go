@@ -84,7 +84,7 @@ func runVerify(target string, provider string) (err error) {
 
 	// TO DO: verify that the secret alerts are valid:
 	for alert := range sortedAlerts {
-		verifyAlert(alert)
+		verifyAlert(sortedAlerts[alert])
 		// TO DO: optionally create issues in repos that contain verified secret alerts:
 	}
 

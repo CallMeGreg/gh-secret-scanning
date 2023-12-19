@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/cli/go-gh/pkg/tableprinter"
@@ -49,7 +48,12 @@ func runAlerts(cmd *cobra.Command, args []string) (err error) {
 	values := parsedURL.Query()
 	values.Set("per_page", per_page)
 	// if provider was specified, filter results. Otherwise, return all results:
-	secret_type := strings.Join(ProviderTokenMapping[provider], ",")
+	var secret_type string
+	if provider != "" {
+		secret_type = getSecretTypeParameter()
+	} else {
+		secret_type = ""
+	}
 	values.Set("secret_type", secret_type)
 	parsedURL.RawQuery = values.Encode()
 
