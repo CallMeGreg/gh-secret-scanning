@@ -26,7 +26,7 @@ type Repository struct {
 	Full_name string `json:"full_name"`
 }
 
-type Alerts struct {
+type Alert struct {
 	Number                      int        `json:"number"`
 	Created_at                  string     `json:"created_at"`
 	URL                         string     `json:"url"`
@@ -205,7 +205,7 @@ func validateProvider(provider string) (err error) {
 	return err
 }
 
-func sortAlerts(alerts []Alerts) []Alerts {
+func sortAlerts(alerts []Alert) []Alert {
 	// handle repo name for repo endpoint which doesn't return the repo name field
 	if repository != "" {
 		for i := range alerts {
@@ -253,7 +253,7 @@ func getScopeAndTarget() (scope string, target string, err error) {
 	return scope, target, err
 }
 
-func verifyAlert(alert Alerts) (err error) {
+func verifyAlert(alert Alert) (err error) {
 
 	return
 }

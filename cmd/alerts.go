@@ -61,8 +61,8 @@ func runAlerts(cmd *cobra.Command, args []string) (err error) {
 	requestPath = parsedURL.String()
 
 	// loop through calls to the API until all pages of results have been fetched or limit has been reached:
-	var allSecretAlerts []Alerts
-	var pageOfSecretAlerts []Alerts
+	var allSecretAlerts []Alert
+	var pageOfSecretAlerts []Alert
 	var pages = int(math.Ceil(float64(limit) / float64(per_page_int)))
 	for page := 1; page <= pages; page++ {
 		log.Printf("Processing page: %d\n", page)

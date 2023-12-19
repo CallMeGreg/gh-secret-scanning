@@ -56,8 +56,8 @@ func runVerify(target string, provider string) (err error) {
 	requestPath = parsedURL.String()
 
 	// loop through calls to the API until all pages of results have been fetched or limit has been reached:
-	var allSecretAlerts []Alerts
-	var pageOfSecretAlerts []Alerts
+	var allSecretAlerts []Alert
+	var pageOfSecretAlerts []Alert
 	var pages = int(math.Ceil(float64(limit) / float64(per_page_int)))
 	for page := 1; page <= pages; page++ {
 		log.Printf("Processing page: %d\n", page)
@@ -83,8 +83,8 @@ func runVerify(target string, provider string) (err error) {
 	sortedAlerts := sortAlerts(allSecretAlerts)
 
 	// TO DO: verify that the secret alerts are valid:
-	for alert := range sortedAlerts {
-		verifyAlert(sortedAlerts[alert])
+	for _, alert := range sortedAlerts {
+		verifyAlert(alert)
 		// TO DO: optionally create issues in repos that contain verified secret alerts:
 	}
 
