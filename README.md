@@ -1,8 +1,8 @@
 # Overview
 This project is a GitHub CLI (`gh`) extension that provides commands for interacting with secret scanning alerts. Primary uses include:
 - Listing secret scanning alerts for an enterprise, organization, or repository
-- Verifying if a secret is valid (for select providers)
-- Opening issues in repos that contain verified secrets
+- :construction: (TBA) Verifying if a secret is valid (for select providers)
+- :construction: (TBA) Opening issues in repos that contain verified secrets
 
 # Pre-requisites
 - [GitHub CLI](https://github.com/cli/cli#installation)

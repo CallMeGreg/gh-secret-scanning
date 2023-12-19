@@ -27,7 +27,7 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&limit, "limit", "l", 30, "Limit the number of secrets processed")
 	rootCmd.PersistentFlags().BoolVarP(&secret, "show-secret", "s", false, "Display secret values")
 	rootCmd.PersistentFlags().BoolVarP(&csvReport, "csv", "c", false, "Generate a csv report of the results")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Generate verbose output")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Include additional secret alert fields")
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Minimize output to the console")
 
 	// require exactly one (1) choice of enterprise, organization, or repository:
@@ -47,10 +47,9 @@ func init() {
 				log.Fatal("Exiting...")
 			}
 		}
-
 		// check if provider is in supportedProviders:
 		if provider != "" {
-			validateProvider(provider)
+			return validateProvider(provider)
 		}
 		return
 	}

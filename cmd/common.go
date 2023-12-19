@@ -26,7 +26,7 @@ type Repository struct {
 	Full_name string `json:"full_name"`
 }
 
-type Alerts struct {
+type Alert struct {
 	Number                      int        `json:"number"`
 	Created_at                  string     `json:"created_at"`
 	URL                         string     `json:"url"`
@@ -42,6 +42,9 @@ type Alerts struct {
 	Push_protection_bypassed    bool       `json:"push_protection_bypassed"`
 	Push_protection_bypassed_at string     `json:"push_protection_bypassed_at"`
 	Push_protection_bypassed_by User       `json:"push_protection_bypassed_by"`
+	Validity_boolean            bool       `json:"validity_boolean"`
+	Validity_response_code      string     `json:"validity_response_code"`
+	Validity_response_body      string     `json:"validity_response_body"`
 }
 
 type HttpMethod int
@@ -62,11 +65,6 @@ const (
 
 var per_page string = "100"
 var per_page_int int = 100
-
-var ProviderTokenMapping = map[string][]string{
-	"github": {"github_personal_access_token"},
-	"slack":  {"slack_api_token"},
-}
 
 func createGitHubSecretAlertsAPIPath(scope string, target string) (apiURL string, err error) {
 	switch scope {
@@ -193,26 +191,28 @@ func findNextPage(nextPageLink string) (string, bool) {
 		}
 	}
 	return "", false
-
 }
 
 func validateProvider(provider string) (err error) {
-	for supportedProvider := range ProviderTokenMapping {
-		if strings.ToLower(provider) == supportedProvider {
-			fmt.Println(Blue("Filtering for alerts from:"), provider)
-			return
+	providerList := MainRegistry.GetProviders()
+	providers := MainRegistry.Providers
+	for _, item := range providers {
+		if strings.ToLower(item.Name) == strings.ToLower(provider) {
+			return nil
 		}
 	}
-	keys := make([]string, 0, len(ProviderTokenMapping))
-	for k := range ProviderTokenMapping {
-		keys = append(keys, k)
-	}
-	providers := strings.Join(keys, ", ")
-	log.Fatal(Red("Invalid provider specified. Please choose from the list of supported providers: "), providers)
-	return
+	err = fmt.Errorf(Red("Invalid provider: " + provider + "\nValid providers are: " + providerList))
+	return err
 }
 
-func sortAlerts(alerts []Alerts) []Alerts {
+func sortAlerts(alerts []Alert) []Alert {
+	// handle repo name for repo endpoint which doesn't return the repo name field
+	if repository != "" {
+		for i := range alerts {
+			alerts[i].Repository.Full_name = repository
+		}
+	}
+	// sort alerts by repo name and then alert number
 	sort.Slice(alerts, func(i, j int) bool {
 		if alerts[i].Repository.Full_name == alerts[j].Repository.Full_name {
 			return alerts[i].Number < alerts[j].Number
@@ -220,4 +220,40 @@ func sortAlerts(alerts []Alerts) []Alerts {
 		return alerts[i].Repository.Full_name < alerts[j].Repository.Full_name
 	})
 	return alerts
+}
+
+func getSecretTypeParameter() (secret_type_param string) {
+	// if provider was specified, only return the secret types for that provider:
+	if provider != "" {
+		for _, item := range MainRegistry.Providers {
+			if strings.ToLower(item.Name) == strings.ToLower(provider) {
+				secret_type_param = item.GetTokenTypes()
+			}
+		}
+	} else {
+		// otherwise return all validation-supported secret types:
+		for _, item := range MainRegistry.Providers {
+			secret_type_param = secret_type_param + item.GetTokenTypes() + ","
+		}
+	}
+	return secret_type_param
+}
+
+func getScopeAndTarget() (scope string, target string, err error) {
+	if enterprise != "" {
+		scope = "enterprise"
+		target = enterprise
+	} else if organization != "" {
+		scope = "organization"
+		target = organization
+	} else if repository != "" {
+		scope = "repository"
+		target = repository
+	}
+	return scope, target, err
+}
+
+func verifyAlert(alert Alert) (err error) {
+
+	return
 }
