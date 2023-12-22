@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"net/url"
 	"strconv"
@@ -79,10 +78,10 @@ func runAlerts(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	for page := 1; page <= pages; page++ {
-		log.Printf("Processing page: %d\n", page)
+		fmt.Println("Processing page: " + strconv.Itoa(page))
 		_, nextPage, err := callGitHubAPI(client, requestPath, &pageOfSecretAlerts, GET)
 		if err != nil {
-			log.Printf("ERROR: Unable to get alerts for target: %s\n", requestPath)
+			fmt.Println("ERROR: Unable to get alerts for target: " + requestPath)
 			return err
 		}
 		for _, secretAlert := range pageOfSecretAlerts {
@@ -108,7 +107,7 @@ func runAlerts(cmd *cobra.Command, args []string) (err error) {
 
 	// pretty print all of the response details:
 	if !quiet {
-		prettyPrintAlerts(sortedAlerts, false)
+		err = prettyPrintAlerts(sortedAlerts, false)
 	}
 
 	// optionally generate a csv report of the results:

@@ -1,7 +1,7 @@
 # Overview
 This project is a GitHub CLI (`gh`) extension that provides commands for interacting with secret scanning alerts. Primary uses include:
 - Listing secret scanning alerts for an enterprise, organization, or repository
-- Verifying if a secret is valid
+- Verifying if secret alerts are still active
 - Opening issues in repos that contain valid secrets
 
 # Supported Token Types
@@ -103,9 +103,7 @@ Use "secret-scanning [command] --help" for more information about a command.
 ```
 
 # Demo
-This example first lists the alerts for an organization with the `alerts` subcommand, and then verifies the secrets with the `verify` subcommand. The `-c` flag is used to generate a csv report of the results, and the `-i` flag is used to create an issue in any repository that contains a valid secret.
+This example first lists the alerts for an organization with the `alerts` subcommand, and then verifies the secrets with the `verify` subcommand. The `-c` flag is used to generate a csv report of the results, and the `-i` flag is used to create issues in any repository that contains a valid secret.
 
-https://github.com/CallMeGreg/gh-secret-scanning/assets/110078080/58f685a2-52a8-4478-92f9-d7468065ede5
-
-
+https://github.com/CallMeGreg/gh-secret-scanning/assets/110078080/fa8d7b08-1a2c-4522-ae96-5c3aab60107d
 
