@@ -18,6 +18,7 @@ import (
 
 	"github.com/cli/go-gh/pkg/tableprinter"
 	"github.com/cli/go-gh/pkg/term"
+	"github.com/cli/go-gh/v2"
 	"github.com/cli/go-gh/v2/pkg/api"
 )
 
@@ -49,6 +50,7 @@ type Alert struct {
 	Push_protection_bypassed_by User       `json:"push_protection_bypassed_by"`
 	Validity_boolean            bool       `json:"validity_boolean"`
 	Validity_response_code      string     `json:"validity_response_code"`
+	Validity_endpoint           string     `json:"validity_endpoint"`
 }
 
 type HttpMethod int
@@ -66,9 +68,6 @@ const (
 	organizationAlertsURL = "orgs/{org}/secret-scanning/alerts"
 	repositoryAlertsURL   = "repos/{owner}/{repo}/secret-scanning/alerts"
 )
-
-var per_page string = "100"
-var per_page_int int = 100
 
 func createGitHubSecretAlertsAPIPath(scope string, target string) (apiURL string, err error) {
 	switch scope {
@@ -106,6 +105,10 @@ func Blue(s string) string {
 	return "\x1b[34m" + s + "\x1b[m"
 }
 
+func Gray(s string) string {
+	return "\x1b[90m" + s + "\x1b[m"
+}
+
 func setOptions() api.ClientOptions {
 	var opts api.ClientOptions
 	if quiet {
@@ -125,7 +128,7 @@ func setOptions() api.ClientOptions {
 	return opts
 }
 
-func callApi(client *api.RESTClient, requestPath string, parseType interface{}, method HttpMethod, postBody ...[]byte) (int, string, error) {
+func callGitHubAPI(client *api.RESTClient, requestPath string, parseType interface{}, method HttpMethod, postBody ...[]byte) (int, string, error) {
 	var httpMethod string
 	switch method {
 	case POST:
@@ -275,7 +278,8 @@ func prettyPrintAlerts(alerts []Alert, validity_check bool) {
 		}
 		if validity_check {
 			t.AddField("Confirmed Valid", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
-			t.AddField("Validity Check Status Code", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+			t.AddField("Status Code", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+			t.AddField("Validity Endpoint", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
 		}
 		if verbose {
 			t.AddField("Created At", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
@@ -291,26 +295,33 @@ func prettyPrintAlerts(alerts []Alert, validity_check bool) {
 
 		for counter < len(alerts) && counter < limit {
 			alert := alerts[counter]
-			t.AddField(alert.Repository.Full_name, tableprinter.WithTruncate(nil))
-			t.AddField(strconv.Itoa(alert.Number), tableprinter.WithTruncate(nil))
-			t.AddField(alert.State, tableprinter.WithTruncate(nil))
-			t.AddField(alert.Secret_type, tableprinter.WithTruncate(nil))
+			var color func(string) string
+			if alert.Validity_boolean {
+				color = Yellow
+			} else {
+				color = Gray
+			}
+			t.AddField(alert.Repository.Full_name, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
+			t.AddField(strconv.Itoa(alert.Number), tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
+			t.AddField(alert.State, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
+			t.AddField(alert.Secret_type, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
 			if secret {
-				t.AddField(alert.Secret, tableprinter.WithTruncate(nil))
+				t.AddField(alert.Secret, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
 			}
 			if validity_check {
-				t.AddField(strconv.FormatBool(alert.Validity_boolean), tableprinter.WithTruncate(nil))
-				t.AddField(alert.Validity_response_code, tableprinter.WithTruncate(nil))
+				t.AddField(strconv.FormatBool(alert.Validity_boolean), tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
+				t.AddField(alert.Validity_response_code, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
+				t.AddField(alert.Validity_endpoint, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
 			}
 			if verbose {
-				t.AddField(alert.Created_at, tableprinter.WithTruncate(nil))
-				t.AddField(alert.Resolution, tableprinter.WithTruncate(nil))
-				t.AddField(alert.Resolved_at, tableprinter.WithTruncate(nil))
-				t.AddField(alert.Resolved_by.Login, tableprinter.WithTruncate(nil))
-				t.AddField(strconv.FormatBool(alert.Push_protection_bypassed), tableprinter.WithTruncate(nil))
-				t.AddField(alert.Push_protection_bypassed_at, tableprinter.WithTruncate(nil))
-				t.AddField(alert.Push_protection_bypassed_by.Login, tableprinter.WithTruncate(nil))
-				t.AddField(alert.HTML_URL, tableprinter.WithTruncate(nil))
+				t.AddField(alert.Created_at, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
+				t.AddField(alert.Resolution, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
+				t.AddField(alert.Resolved_at, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
+				t.AddField(alert.Resolved_by.Login, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
+				t.AddField(strconv.FormatBool(alert.Push_protection_bypassed), tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
+				t.AddField(alert.Push_protection_bypassed_at, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
+				t.AddField(alert.Push_protection_bypassed_by.Login, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
+				t.AddField(alert.HTML_URL, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
 			}
 			t.EndRow()
 			counter++
@@ -326,7 +337,7 @@ func prettyPrintAlerts(alerts []Alert, validity_check bool) {
 	}
 }
 
-func generateCSVReport(alerts []Alert, scope string) (err error) {
+func generateCSVReport(alerts []Alert, scope string, validity_check bool) (err error) {
 	fmt.Println(Blue("Generating CSV report..."))
 	// reset counter
 	counter := 0
@@ -348,6 +359,9 @@ func generateCSVReport(alerts []Alert, scope string) (err error) {
 	if secret {
 		headers = append(headers, "Secret")
 	}
+	if validity_check {
+		headers = append(headers, "Confirmed Valid", "Status Code", "Validation Endpoint")
+	}
 	if verbose {
 		headers = append(headers, "Created At", "Resolution", "Resolved At", "Resolved By", "Push Protection Bypassed", "Push Protection Bypassed At", "Push Protection Bypassed By", "URL")
 	}
@@ -358,6 +372,9 @@ func generateCSVReport(alerts []Alert, scope string) (err error) {
 		row := []string{alert.Repository.Full_name, strconv.Itoa(alert.Number), alert.State, alert.Secret_type}
 		if secret {
 			row = append(row, alert.Secret)
+		}
+		if validity_check {
+			row = append(row, strconv.FormatBool(alert.Validity_boolean), alert.Validity_response_code, alert.Validity_endpoint)
 		}
 		if verbose {
 			row = append(row, alert.Created_at, alert.Resolution, alert.Resolved_at, alert.Resolved_by.Login, strconv.FormatBool(alert.Push_protection_bypassed), alert.Push_protection_bypassed_at, alert.Push_protection_bypassed_by.Login, alert.HTML_URL)
@@ -372,43 +389,173 @@ func generateCSVReport(alerts []Alert, scope string) (err error) {
 	return err
 }
 
-func verifyAlert(alert Alert) (status_code int, err error) {
-	// verify that the alert is valid by making a request to its validation endpoint:
-	provider := strings.Split(alert.Secret_type, "_")[0]
-	secret_type := alert.Secret_type
-	secret_validation_endpoint := SupportedProviders[provider][secret_type]["ValidationEndpoint"]
-	secret_validation_method := SupportedProviders[provider][secret_type]["HttpMethod"]
-	secret_validation_content_type := SupportedProviders[provider][secret_type]["ContentType"]
-	auth_header := "Bearer " + alert.Secret
+func verifyAlerts(alerts []Alert) (alertsOutput []Alert, err error) {
+	for i, alert := range alerts {
+		// verify that the alert is valid by making a request to its validation endpoint:
+		provider := strings.Split(alert.Secret_type, "_")[0]
+		secret_type := alert.Secret_type
+		secret_validation_method := SupportedProviders[provider][secret_type]["HttpMethod"]
+		secret_validation_content_type := SupportedProviders[provider][secret_type]["ContentType"]
+		alert.Validity_endpoint = SupportedProviders[provider][secret_type]["ValidationEndpoint"]
 
-	// create a new client for the validation request:
-	var opts api.ClientOptions
-	opts.AuthToken = auth_header
-	client, err := api.NewHTTPClient(opts)
+		// create a new client for the validation request:
+		var opts api.ClientOptions
+		opts.AuthToken = alert.Secret
+		opts.Headers = map[string]string{
+			"User-Agent": "gh-secret-scanning",
+		}
+		client, err := api.NewHTTPClient(opts)
+		if err != nil {
+			log.Println("ERROR: Unable to create HTTP client")
+			return alerts, err
+		}
+		// send a request to the validation endpoint:
+		var response *http.Response
+		if secret_validation_method == "POST" {
+			var body io.Reader
+			req, err := http.NewRequest("POST", alert.Validity_endpoint, body)
+			req.Header.Set("Authorization", "Bearer "+alert.Secret)
+			req.Header.Set("Content-Type", secret_validation_content_type)
+			req.Header.Set("User-Agent", "gh-secret-scanning")
+			response, err = client.Do(req)
+			// response, err = client.Post(alert.Validity_endpoint, secret_validation_content_type, body)
+			if err != nil {
+				log.Println("ERROR: Unable to send " + secret_validation_method + " request to " + alert.Validity_endpoint)
+				continue
+			}
+			alert.Validity_response_code = strconv.Itoa(response.StatusCode)
+			defer response.Body.Close()
+		} else if secret_validation_method == "GET" {
+			response, err = client.Get(alert.Validity_endpoint)
+			if err != nil {
+				log.Println("ERROR: Unable to send " + secret_validation_method + " request to " + alert.Validity_endpoint)
+				continue
+			}
+			alert.Validity_response_code = strconv.Itoa(response.StatusCode)
+		} else {
+			log.Println("ERROR: Invalid HTTP method for validation endpoint")
+			continue
+		}
+		expected_body_key := SupportedProviders[provider][secret_type]["ExpectedBodyKey"]
+		expected_body_value := SupportedProviders[provider][secret_type]["ExpectedBodyValue"]
+		if expected_body_key != "" {
+			alert.Validity_boolean = checkForExpectedBody(response, expected_body_key, expected_body_value, alert)
+		} else if alert.Validity_response_code == "200" {
+			alert.Validity_boolean = true
+			if verbose {
+				log.Println(Yellow("CONFIRMED: Alert " + strconv.Itoa(alert.Number) + " in " + alert.Repository.Full_name + " is valid."))
+			}
+		} else {
+			alert.Validity_boolean = false
+		}
+		if provider == "github" && alert.Validity_boolean == false && host != "github.com" {
+			// also confirm validity with the provided GitHub Enterprise Server API:
+			alert = checkEnterpriseServerAPI(alert, client, secret_validation_method, secret_validation_content_type)
+			if alert.Validity_response_code == "200" {
+				alert.Validity_boolean = true
+				if verbose {
+					log.Println(Yellow("CONFIRMED: Alert " + strconv.Itoa(alert.Number) + " in " + alert.Repository.Full_name + " is valid."))
+				}
+			} else {
+				alert.Validity_boolean = false
+			}
+		}
+		alerts[i] = alert
+	}
+	return alerts, err
+}
+
+func checkForExpectedBody(response *http.Response, expected_body_key string, expected_body_value string, alert Alert) (validity_boolean bool) {
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		log.Println("ERROR: Unable to create HTTP client")
-		return 0, err
+		log.Println("ERROR: Unable to read response body")
+		return false
 	}
-	// send a request to the validation endpoint:
-	var response *http.Response
-	var body io.Reader
-	if secret_validation_method == "POST" {
-		response, err := client.Post(secret_validation_endpoint, secret_validation_content_type, body)
-		if err != nil {
-			log.Println("ERROR: Unable to send " + secret_validation_method + " request to " + secret_validation_endpoint)
-			return response.StatusCode, err
+	var response_body map[string]interface{}
+	err = json.Unmarshal(body, &response_body)
+	if err != nil {
+		log.Println("ERROR: Unable to unmarshal response body")
+		return false
+	}
+	log.Println(response_body)
+	body_value := response_body[expected_body_key]
+	if body_value.(bool) {
+		// convert response_value to a string
+		body_value = strconv.FormatBool(body_value.(bool))
+	}
+	if body_value == expected_body_value {
+		alert.Validity_boolean = true
+		if verbose {
+			log.Println(Yellow("CONFIRMED: Alert " + strconv.Itoa(alert.Number) + " in " + alert.Repository.Full_name + " is valid."))
 		}
-		defer response.Body.Close()
-	} else if secret_validation_method == "GET" {
-		response, err := client.Get(secret_validation_endpoint)
-		if err != nil {
-			log.Println("ERROR: Unable to send " + secret_validation_method + " request to " + secret_validation_endpoint)
-			return response.StatusCode, err
-		}
-		return response.StatusCode, nil
 	} else {
-		log.Println("ERROR: Invalid HTTP method for validation endpoint")
-		return 0, err
+		alert.Validity_boolean = false
 	}
-	return response.StatusCode, err
+	return alert.Validity_boolean
+}
+
+func checkEnterpriseServerAPI(alert Alert, client *http.Client, secret_validation_method string, secret_validation_content_type string) (alertOutput Alert) {
+	enterprise_server_api_endpoint := "https://" + host + "/api/v3/"
+	// create a new http request:
+	req, err := http.NewRequest("GET", enterprise_server_api_endpoint, nil)
+	req.Header.Set("Authorization", "Bearer "+alert.Secret)
+	req.Header.Set("Content-Type", secret_validation_content_type)
+	req.Header.Set("User-Agent", "gh-secret-scanning")
+	response, err := client.Do(req)
+	if err != nil {
+		log.Println("ERROR: Unable to send " + secret_validation_method + " request to " + alert.Validity_endpoint)
+	}
+	alert.Validity_response_code = strconv.Itoa(response.StatusCode)
+	alert.Validity_endpoint = enterprise_server_api_endpoint
+	return alert
+}
+
+func createIssuesForValidAlerts(alerts []Alert) (err error) {
+	fmt.Println(Blue("Creating issues for valid alerts..."))
+	issue_count := 0
+	alertsByRepo := make(map[string][]Alert)
+	for _, alert := range alerts {
+		alertsByRepo[alert.Repository.Full_name] = append(alertsByRepo[alert.Repository.Full_name], alert)
+	}
+	for repo, alerts := range alertsByRepo {
+		// Check if there is at least one confirmed valid secret alert
+		hasValidAlert := false
+		for _, alert := range alerts {
+			if alert.Validity_boolean {
+				hasValidAlert = true
+				break
+			}
+		}
+		// If there is no confirmed valid secret alert, skip this repository
+		if !hasValidAlert {
+			continue
+		}
+		// Create a string with the details of the alerts
+		details := "**Please promptly revoke the following secrets and confirm in the provider's logs that they have not been used maliciously:**\n\n"
+		details += "| Alert ID | Secret Type | Alert Link |\n"
+		details += "| --- | --- | --- |\n"
+		for _, alert := range alerts {
+			if alert.Validity_boolean {
+				details += fmt.Sprintf("| %d | %s | [Link](%s) |\n", alert.Number, alert.Secret_type, alert.HTML_URL)
+			}
+		}
+		// Create the issue
+		var repo_with_host string
+		if host == "" {
+			repo_with_host = repo
+		} else {
+			repo_with_host = host + "/" + repo
+		}
+		_, _, err := gh.Exec("issue", "create", "--title", "IMMEDIATE ACTION REQUIRED: Active Secrets Detected", "--body", details, "--repo", repo_with_host)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			issue_count++
+			if verbose {
+				fmt.Println("Created issue in " + repo)
+			}
+		}
+	}
+	fmt.Println(Blue("Created " + strconv.Itoa(issue_count) + " issue(s)."))
+	return err
 }

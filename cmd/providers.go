@@ -5,7 +5,9 @@ var SupportedProviders = map[string]map[string]map[string]string{
 		"github_personal_access_token": {
 			"ValidationEndpoint": "https://api.github.com",
 			"HttpMethod":         "GET",
-			"ContentType":        "application/json",
+			"ContentType":        "application/vnd.github.v3+json",
+			"ExpectedBodyKey":    "",
+			"ExpectedBodyValue":  "",
 		},
 	},
 	"slack": {
@@ -13,6 +15,8 @@ var SupportedProviders = map[string]map[string]map[string]string{
 			"ValidationEndpoint": "https://slack.com/api/auth.test",
 			"HttpMethod":         "POST",
 			"ContentType":        "application/json",
+			"ExpectedBodyKey":    "ok",
+			"ExpectedBodyValue":  "true",
 		},
 	},
 }

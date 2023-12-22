@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"net/url"
+	"strconv"
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/spf13/cobra"
@@ -40,6 +41,17 @@ func runAlerts(cmd *cobra.Command, args []string) (err error) {
 		return
 	}
 	values := parsedURL.Query()
+
+	var per_page string
+	if limit < 100 {
+		per_page = strconv.Itoa(limit)
+	} else {
+		per_page = "100"
+	}
+	per_page_int, err := strconv.Atoi(per_page)
+	if err != nil {
+		fmt.Println(err)
+	}
 	values.Set("per_page", per_page)
 	// if provider was specified, filter results. Otherwise, return all results:
 	var secret_type string
@@ -68,7 +80,7 @@ func runAlerts(cmd *cobra.Command, args []string) (err error) {
 
 	for page := 1; page <= pages; page++ {
 		log.Printf("Processing page: %d\n", page)
-		_, nextPage, err := callApi(client, requestPath, &pageOfSecretAlerts, GET)
+		_, nextPage, err := callGitHubAPI(client, requestPath, &pageOfSecretAlerts, GET)
 		if err != nil {
 			log.Printf("ERROR: Unable to get alerts for target: %s\n", requestPath)
 			return err
@@ -101,7 +113,7 @@ func runAlerts(cmd *cobra.Command, args []string) (err error) {
 
 	// optionally generate a csv report of the results:
 	if len(sortedAlerts) > 0 && csvReport {
-		err = generateCSVReport(sortedAlerts, scope)
+		err = generateCSVReport(sortedAlerts, scope, false)
 		if err != nil {
 			fmt.Println(err)
 			return err

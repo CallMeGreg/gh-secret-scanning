@@ -14,8 +14,7 @@ import (
 var createIssues bool
 
 func init() {
-	// TO DO: uncomment flag
-	// verifyCmd.PersistentFlags().BoolVarP(&createIssues, "create-issues", "c", false, "Create issues in repos that contain verified secret alerts")
+	verifyCmd.PersistentFlags().BoolVarP(&createIssues, "create-issues", "i", false, "Create issues in repos that contain valid secret alerts")
 }
 
 var verifyCmd = &cobra.Command{
@@ -27,7 +26,6 @@ var verifyCmd = &cobra.Command{
 }
 
 func runVerify(cmd *cobra.Command, args []string) (err error) {
-	// TO DO: get secret alerts for specified target (optionally filtered by provider):
 	// set scope & target based on the flag that was used:
 	scope, target, err := getScopeAndTarget()
 	if err != nil {
@@ -49,6 +47,16 @@ func runVerify(cmd *cobra.Command, args []string) (err error) {
 		return
 	}
 	values := parsedURL.Query()
+	var per_page string
+	if limit < 100 {
+		per_page = strconv.Itoa(limit)
+	} else {
+		per_page = "100"
+	}
+	per_page_int, err := strconv.Atoi(per_page)
+	if err != nil {
+		fmt.Println(err)
+	}
 	values.Set("per_page", per_page)
 	// if provider was specified, filter results for just that provider. Otherwise, target all supported providers:
 	secret_type := getSecretTypeParameter()
@@ -65,7 +73,6 @@ func runVerify(cmd *cobra.Command, args []string) (err error) {
 
 	opts := setOptions()
 	client, err := api.NewRESTClient(opts)
-	api.DefaultRESTClient()
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -73,7 +80,7 @@ func runVerify(cmd *cobra.Command, args []string) (err error) {
 
 	for page := 1; page <= pages; page++ {
 		log.Printf("Processing page: %d\n", page)
-		_, nextPage, err := callApi(client, requestPath, &pageOfSecretAlerts, GET)
+		_, nextPage, err := callGitHubAPI(client, requestPath, &pageOfSecretAlerts, GET)
 		if err != nil {
 			log.Printf("ERROR: Unable to get alerts for target: %s\n", requestPath)
 			return err
@@ -99,29 +106,31 @@ func runVerify(cmd *cobra.Command, args []string) (err error) {
 		sortedAlerts = addRepoFullNameToAlerts(sortedAlerts)
 	}
 
-	// TO DO: verify that the secret alerts are valid:
-	for _, alert := range sortedAlerts {
-		status_code, err := verifyAlert(alert)
+	// verify which secret alerts are confirmed valid:
+	verifiedAlerts, err := verifyAlerts(sortedAlerts)
+	if err != nil {
+		// Log to console
+		fmt.Println("ERROR sending verify request: " + err.Error())
+	}
+	// pretty print with validity status
+	if !quiet {
+		prettyPrintAlerts(verifiedAlerts, true)
+	}
+	// optionally generate a csv report of the results:
+	if len(sortedAlerts) > 0 && csvReport {
+		err = generateCSVReport(sortedAlerts, scope, true)
 		if err != nil {
-			// Log to console
 			fmt.Println(err)
-		} else {
-			alert.Validity_response_code = strconv.Itoa(status_code)
-			// check if status code is 200:
-			if status_code == 200 {
-				log.Println("CONFIRMED: Alert " + strconv.Itoa(alert.Number) + " in " + alert.Repository.Full_name + " is valid.")
-				alert.Validity_boolean = true
-			} else {
-				log.Println("Unable to confirm validity for alert " + strconv.Itoa(alert.Number) + " in " + alert.Repository.Full_name + ".")
-				alert.Validity_boolean = false
-			}
+			return err
 		}
 	}
-	// TO DO: pretty print with validity status
-	if !quiet {
-		prettyPrintAlerts(sortedAlerts, true)
+	// optionally create an issue for each repository that contains at least one valid secret alert:
+	if createIssues {
+		err = createIssuesForValidAlerts(verifiedAlerts)
 	}
-	// TO DO: optionally create issues in repos that contain verified secret alerts:
-
-	return
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	return err
 }

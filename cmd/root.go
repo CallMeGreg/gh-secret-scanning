@@ -64,6 +64,6 @@ var rootCmd = &cobra.Command{
 
 func Root() {
 	rootCmd.AddCommand(alertsCmd)
-	// rootCmd.AddCommand(verifyCmd)
+	rootCmd.AddCommand(verifyCmd)
 	rootCmd.Execute()
 }
