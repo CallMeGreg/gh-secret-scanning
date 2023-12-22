@@ -1,48 +1,77 @@
 # Overview
 This project is a GitHub CLI (`gh`) extension that provides commands for interacting with secret scanning alerts. Primary uses include:
 - Listing secret scanning alerts for an enterprise, organization, or repository
-- :construction: (TBA) Verifying if a secret is valid (for select providers)
-- :construction: (TBA) Opening issues in repos that contain verified secrets
+- Verifying if a secret is valid
+- Opening issues in repos that contain valid secrets
+
+# Supported Token Types
+- GitHub Personal Access Tokens
+- Slack API Tokens
 
 # Pre-requisites
 - [GitHub CLI](https://github.com/cli/cli#installation)
 - GitHub Enterprise Server 3.7+ or GitHub Enterprise Cloud
 
 # Installation
-```bash
+```
 gh extension install CallMeGreg/gh-secret-scanning
 ```
 
 # Usage
 Authenticate with your GitHub Enterprise Server or GitHub Enterprise Cloud account:
-```bash
+```
 gh auth login
 ```
 
 ## Alerts subcommand
-List secret scanning alerts for an enterprise:
-```bash
+Target either an enterprise, organization, or repository by specifying the `-e`, `-o`, or `-r` flags respectively. _Exactly one selection from these three flags is required._
+
+```
 gh secret-scanning alerts -e <enterprise>
 ```
 
-List secret scanning alerts for an organization:
-```bash
+```
 gh secret-scanning alerts -o <organization>
 ```
 
-List secret scanning alerts for a repository:
-```bash
+```
 gh secret-scanning alerts -r <repository>
 ```
 
-Add flags to specify a GHES server, limit the number of secrets processed, filter for a specific secret provider, display the secret values, generate a csv report, include extra fields, and more:
-```bash
-gh secret-scanning alerts -e github -u my-github-server.com -l 10 -p slack -s -c -v
+Optionally add flags to specify a GHES server, limit the number of secrets processed, filter for a specific secret provider, display the secret values, generate a csv report, include extra fields, and more:
 ```
+gh secret-scanning alerts -e github --url my-github-server.com --limit 10 --provider slack --show-secret --csv --verbose
+```
+
+## Verify subcommand
+Target either an enterprise, organization, or repository by specifying the `-e`, `-o`, or `-r` flags respectively. _Exactly one selection from these three flags is required._
+
+```
+gh secret-scanning verify -e <enterprise>
+```
+
+```
+gh secret-scanning verify -o <organization>
+```
+
+```
+gh secret-scanning verify -r <repository>
+```
+
+Optionally add flags to specify a GHES server, limit the number of secrets processed, filter for a specific secret provider, display the secret values, generate a csv report, include extra fields, and more:
+```
+gh secret-scanning verify -e github --url my-github-server.com --limit 10 --provider slack --show-secret --csv --verbose
+```
+
+Also, optionally create issue in any repository that contains a valid secret using the `--create-issues` (`-i`) flag:
+```
+gh secret-scanning verify -e github --url my-github-server.com --create-issues
+```
+
 
 ## Help
 See available commands and flags by running:
-```bash
+```
 gh secret-scanning -h
 ```
 
@@ -55,6 +84,7 @@ Usage:
 Available Commands:
   alerts      Get secret scanning alerts for an enterprise, organization, or repository
   help        Help about any command
+  verify      Verify alerts for an enterprise, organization, or repository
 
 Flags:
   -c, --csv                   Generate a csv report of the results
@@ -67,7 +97,15 @@ Flags:
   -r, --repository string     GitHub owner/repository slug
   -s, --show-secret           Display secret values
   -u, --url string            GitHub host to connect to (default "github.com")
-  -v, --verbose               Generate verbose output
+  -v, --verbose               Include additional secret alert fields
 
 Use "secret-scanning [command] --help" for more information about a command.
 ```
+
+# Demo
+This example first lists the alerts for an organization with the `alerts` subcommand, and then verifies the secrets with the `verify` subcommand. The `-c` flag is used to generate a csv report of the results, and the `-i` flag is used to create an issue in any repository that contains a valid secret.
+
+https://github.com/CallMeGreg/gh-secret-scanning/assets/110078080/58f685a2-52a8-4478-92f9-d7468065ede5
+
+
+
