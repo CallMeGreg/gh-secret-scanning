@@ -101,3 +101,6 @@ Flags:
 
 Use "secret-scanning [command] --help" for more information about a command.
 ```
+
+# Demo
+This example first lists the alerts for an organization with the `alerts` subcommand, and then verifies the secrets with the `verify` subcommand. The `-c` flag is used to generate a csv report of the results, and the `-i` flag is used to create issues in any repository that contains a valid secret.
