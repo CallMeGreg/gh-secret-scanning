@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"net/url"
 	"strconv"
@@ -79,10 +78,10 @@ func runVerify(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	for page := 1; page <= pages; page++ {
-		log.Printf("Processing page: %d\n", page)
+		fmt.Println("Processing page: " + strconv.Itoa(page))
 		_, nextPage, err := callGitHubAPI(client, requestPath, &pageOfSecretAlerts, GET)
 		if err != nil {
-			log.Printf("ERROR: Unable to get alerts for target: %s\n", requestPath)
+			fmt.Println("ERROR: Unable to get alerts for target: " + requestPath)
 			return err
 		}
 		for _, secretAlert := range pageOfSecretAlerts {
@@ -109,8 +108,8 @@ func runVerify(cmd *cobra.Command, args []string) (err error) {
 	// verify which secret alerts are confirmed valid:
 	verifiedAlerts, err := verifyAlerts(sortedAlerts)
 	if err != nil {
-		// Log to console
-		fmt.Println("ERROR sending verify request: " + err.Error())
+		// print to console
+		fmt.Println("WARNING: issues encountered while sending verify requests.")
 	}
 	// pretty print with validity status
 	if !quiet {
@@ -127,10 +126,10 @@ func runVerify(cmd *cobra.Command, args []string) (err error) {
 	// optionally create an issue for each repository that contains at least one valid secret alert:
 	if createIssues {
 		err = createIssuesForValidAlerts(verifiedAlerts)
-	}
-	if err != nil {
-		fmt.Println(err)
-		return err
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
 	}
 	return err
 }
