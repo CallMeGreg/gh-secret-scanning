@@ -103,4 +103,9 @@ Use "secret-scanning [command] --help" for more information about a command.
 ```
 
 # Demo
-This example first lists the alerts for an organization with the `alerts` subcommand, and then verifies the secrets with the `verify` subcommand. The `-c` flag is used to generate a csv report of the results, and the `-i` flag is used to create issues in any repository that contains a valid secret.
+This example first lists the alerts for an organization with the `alerts` subcommand, and then verifies the secrets with the `verify` subcommand. The `-c` flag is used to generate a csv report of the results, and the `-i` flag is used to create an issue in any repository that contains a valid secret.
+
+https://github.com/CallMeGreg/gh-secret-scanning/assets/110078080/58f685a2-52a8-4478-92f9-d7468065ede5
+
+
+
