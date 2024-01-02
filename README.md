@@ -1,11 +1,15 @@
 # Overview
-This project is a GitHub CLI (`gh`) extension that provides commands for interacting with secret scanning alerts. Primary uses include:
+This project is a GitHub CLI (`gh`) extension that provides commands for interacting with secret scanning alerts.
+
+This extension helps GitHub Advanced Security (GHAS) customers prioritize remediation of their secret scanning alerts by identifying and focusing on those that are confirmed active first.
+
+Primary features include:
 - Listing secret scanning alerts for an enterprise, organization, or repository
-- Verifying if secret alerts are still active
+- Verifying if secret scanning alerts are still active
 - Opening issues in repos that contain valid secrets
 
 # Supported Token Types
-- GitHub Personal Access Tokens
+- GitHub Personal Access Tokens (GHES + GHEC)
 - Slack API Tokens
 
 # Pre-requisites
@@ -63,7 +67,7 @@ Optionally add flags to specify a GHES server, limit the number of secrets proce
 gh secret-scanning verify -e github --url my-github-server.com --limit 10 --provider slack --show-secret --csv --verbose
 ```
 
-Also, optionally create issue in any repository that contains a valid secret using the `--create-issues` (`-i`) flag:
+Also, optionally create an issue in any repository that contains a valid secret by using the `--create-issues` (`-i`) flag:
 ```
 gh secret-scanning verify -e github --url my-github-server.com --create-issues
 ```
