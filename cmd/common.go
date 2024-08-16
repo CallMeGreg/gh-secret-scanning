@@ -341,7 +341,7 @@ func generateCSVReport(alerts []Alert, scope string, validity_check bool) (err e
 	now := time.Now()
 	// Format the time as YYYYMMDD-HHMMSS
 	timestamp := now.Format("20060102-150405")
-	filename := "SecretScanningReport-" + scope + "-" + timestamp + ".csv"
+	filename := secretscanningreport-" + scope + "-" + timestamp + ".csv"
 	// Create a CSV file
 	file, err := os.Create(filename)
 	if err != nil {
