@@ -59,8 +59,10 @@ func runVerify(cmd *cobra.Command, args []string) (err error) {
 	values.Set("per_page", per_page)
 	// if provider was specified, filter results for just that provider. Otherwise, target all supported providers:
 	secret_type := getSecretTypeParameter()
-	values.Set("secret_type", secret_type)
-	parsedURL.RawQuery = values.Encode()
+	if secret_type != "all" {
+		values.Set("secret_type", secret_type)
+		parsedURL.RawQuery = values.Encode()
+	}
 
 	// update the request path
 	requestPath = parsedURL.String()

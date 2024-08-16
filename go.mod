@@ -1,6 +1,6 @@
 module github.com/CallMeGreg/gh-secret-scanning
 
-go 1.19
+go 1.23
 
 require (
 	github.com/cli/go-gh v1.2.1
