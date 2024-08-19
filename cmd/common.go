@@ -47,6 +47,7 @@ type Alert struct {
 	Push_protection_bypassed    bool       `json:"push_protection_bypassed"`
 	Push_protection_bypassed_at string     `json:"push_protection_bypassed_at"`
 	Push_protection_bypassed_by User       `json:"push_protection_bypassed_by"`
+	Validity_github             string     `json:"validity"`
 	Validity_boolean            bool       `json:"validity_boolean"`
 	Validity_response_code      string     `json:"validity_response_code"`
 	Validity_endpoint           string     `json:"validity_endpoint"`
@@ -228,20 +229,12 @@ func addRepoFullNameToAlerts(alerts []Alert) []Alert {
 
 func getSecretTypeParameter() (secret_type_param string) {
 	// if provider was specified, only return the secret types for that provider:
+	secret_type_param = "all"
 	if provider != "" {
 		// get keys for SupportedProviders[provider] map:
 		var secret_types []string
 		for key := range SupportedProviders[provider] {
 			secret_types = append(secret_types, key)
-		}
-		secret_type_param = strings.Join(secret_types, ",")
-	} else {
-		// get keys for every SupportedProvider key:
-		var secret_types []string
-		for _, supported_provider := range SupportedProviders {
-			for key := range supported_provider {
-				secret_types = append(secret_types, key)
-			}
 		}
 		secret_type_param = strings.Join(secret_types, ",")
 	}
@@ -272,6 +265,7 @@ func prettyPrintAlerts(alerts []Alert, validity_check bool) (err error) {
 		t.AddField("ID", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
 		t.AddField("State", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
 		t.AddField("Secret Type", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
+		t.AddField("Validity GitHub", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
 		if secret {
 			t.AddField("Secret", tableprinter.WithColor(Green), tableprinter.WithTruncate(nil))
 		}
@@ -304,6 +298,7 @@ func prettyPrintAlerts(alerts []Alert, validity_check bool) (err error) {
 			t.AddField(strconv.Itoa(alert.Number), tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
 			t.AddField(alert.State, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
 			t.AddField(alert.Secret_type, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
+			t.AddField(alert.Validity_github, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
 			if secret {
 				t.AddField(alert.Secret, tableprinter.WithColor(color), tableprinter.WithTruncate(nil))
 			}
@@ -344,8 +339,9 @@ func generateCSVReport(alerts []Alert, scope string, validity_check bool) (err e
 	counter := 0
 	// get current date & time:
 	now := time.Now()
-	timestamp := now.Format("2006-01-02 15-04-05")
-	filename := "Secret Scanning Report - " + scope + " - " + timestamp + ".csv"
+	// Format the time as YYYYMMDD-HHMMSS
+	timestamp := now.Format("20060102-150405")
+	filename := "secretscanningreport-" + scope + "-" + timestamp + ".csv"
 	// Create a CSV file
 	file, err := os.Create(filename)
 	if err != nil {
@@ -357,7 +353,7 @@ func generateCSVReport(alerts []Alert, scope string, validity_check bool) (err e
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 	// Write headers to CSV file
-	headers := []string{"Repository", "ID", "State", "Secret Type"}
+	headers := []string{"Repository", "ID", "State", "Secret Type", "GitHub Validity"}
 	if secret {
 		headers = append(headers, "Secret")
 	}
@@ -371,7 +367,7 @@ func generateCSVReport(alerts []Alert, scope string, validity_check bool) (err e
 	// Write data to CSV file
 	for counter < len(alerts) && counter < limit {
 		alert := alerts[counter]
-		row := []string{alert.Repository.Full_name, strconv.Itoa(alert.Number), alert.State, alert.Secret_type}
+		row := []string{alert.Repository.Full_name, strconv.Itoa(alert.Number), alert.State, alert.Secret_type, alert.Validity_github}
 		if secret {
 			row = append(row, alert.Secret)
 		}
@@ -393,9 +389,24 @@ func generateCSVReport(alerts []Alert, scope string, validity_check bool) (err e
 }
 
 func verifyAlerts(alerts []Alert) (alertsOutput []Alert, err error) {
+	// Print Supported providers for reference when verbose flag is enabled
+	if verbose {
+		fmt.Println(Blue("Supported Providers:"))
+		for provider, secretTypes := range SupportedProviders {
+			for secretType := range secretTypes {
+				fmt.Printf("- %s - %s\n", provider, secretType)
+			}
+		}
+	}
 	for i, alert := range alerts {
 		// verify that the alert is valid by making a request to its validation endpoint:
 		provider := strings.Split(alert.Secret_type, "_")[0]
+
+		// Skip alert if provider is not supported
+		if _, ok := SupportedProviders[provider]; !ok {
+			continue
+		}
+
 		secret_type := alert.Secret_type
 		secret_validation_method := SupportedProviders[provider][secret_type]["HttpMethod"]
 		secret_validation_content_type := SupportedProviders[provider][secret_type]["ContentType"]

@@ -1,4 +1,6 @@
 /gh-secret-scanning
 /gh-secret-scanning.exe
 release-command.md
-Secret Scanning Report*.csv
+secret*.csv
+Secret*.csv
+.DS_Store
