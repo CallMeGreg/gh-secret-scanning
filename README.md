@@ -4,7 +4,7 @@ This project is a GitHub CLI (`gh`) extension that provides commands for interac
 
 This extension helps GitHub Advanced Security (GHAS) customers prioritize remediation of their secret scanning alerts by identifying and focusing on those that are confirmed active first.
 
-While this extension works for Enterprise Cloud (GHEC) customers, it is primarily intended for GitHub Enterprise Server (GHES) customers who do not have access to the [GitHub.com secret scanning validity check feature](https://docs.github.com/en/enterprise-cloud@latest/code-security/secret-scanning/managing-alerts-from-secret-scanning#validating-partner-patterns). Validity check on GHES is available as of `>=3.12` but currently limited to GitHub Personal Access Tokens (PAT).
+While this extension works for Enterprise Cloud (GHEC) customers, it is primarily intended for GitHub Enterprise Server (GHES) customers who do not have access to the [GitHub.com secret scanning validity check feature](https://docs.github.com/en/enterprise-cloud@latest/code-security/secret-scanning/managing-alerts-from-secret-scanning/evaluating-alerts#checking-a-secrets-validity). Validity check on GHES is available as of `>=3.12` but currently limited to GitHub Personal Access Tokens (PAT).
 
 Primary features include:
 
