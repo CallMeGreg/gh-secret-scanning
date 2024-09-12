@@ -4,3 +4,4 @@ release-command.md
 secret*.csv
 Secret*.csv
 .DS_Store
+.vscode/
