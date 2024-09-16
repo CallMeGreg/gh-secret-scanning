@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -37,13 +38,16 @@ func init() {
 	// disable completion subcommand:
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
+	// silence usage output on error:
+	rootCmd.SilenceUsage = true
+
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) (err error) {
 		// warn user about --show-secret flag:
 		if secret {
 			fmt.Println(Yellow("WARNING: --show-secret flag is enabled. Full secret values will be displayed in PLAIN TEXT in the output. Would you like to continue? (y/n)"))
 			var response string
 			fmt.Scanln(&response)
-			if response != "y" {
+			if strings.ToLower(response) != "y" && strings.ToLower(response) != "yes" {
 				log.Fatal("Exiting...")
 			}
 		}
