@@ -28,22 +28,19 @@ func runVerify(cmd *cobra.Command, args []string) (err error) {
 	// set scope & target based on the flag that was used:
 	scope, target, err := getScopeAndTarget()
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
 	// set the API URL based on the target:
 	requestPath, err := createGitHubSecretAlertsAPIPath(scope, target)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
 	// update the URL to include query parameters based on specified flags:
 	parsedURL, err := url.Parse(requestPath)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 	values := parsedURL.Query()
 	var per_page string
@@ -54,7 +51,7 @@ func runVerify(cmd *cobra.Command, args []string) (err error) {
 	}
 	per_page_int, err := strconv.Atoi(per_page)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 	values.Set("per_page", per_page)
 	// if provider was specified, filter results for just that provider. Otherwise, target all supported providers:
@@ -75,7 +72,6 @@ func runVerify(cmd *cobra.Command, args []string) (err error) {
 	opts := setOptions()
 	client, err := api.NewRESTClient(opts)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
@@ -83,13 +79,10 @@ func runVerify(cmd *cobra.Command, args []string) (err error) {
 		fmt.Println("Processing page: " + strconv.Itoa(page))
 		_, nextPage, err := callGitHubAPI(client, requestPath, &pageOfSecretAlerts, GET)
 		if err != nil {
-			fmt.Println("ERROR: Unable to get alerts for target: " + requestPath)
 			return err
 		}
-		for _, secretAlert := range pageOfSecretAlerts {
-			// add each secret alert in the response page to allSecretAlerts array
-			allSecretAlerts = append(allSecretAlerts, secretAlert)
-		}
+		// add each secret alert in the response page to allSecretAlerts array
+		allSecretAlerts = append(allSecretAlerts, pageOfSecretAlerts...)
 		var hasNextPage bool
 		if requestPath, hasNextPage = findNextPage(nextPage); !hasNextPage {
 			break
@@ -110,13 +103,14 @@ func runVerify(cmd *cobra.Command, args []string) (err error) {
 	// verify which secret alerts are confirmed valid:
 	verifiedAlerts, err := verifyAlerts(sortedAlerts)
 	if err != nil {
-		// print to console
 		fmt.Println("WARNING: issues encountered while sending verify requests.")
 	}
+
 	// pretty print with validity status
 	if !quiet {
 		prettyPrintAlerts(verifiedAlerts, true)
 	}
+
 	// optionally generate a csv report of the results:
 	if len(sortedAlerts) > 0 && csvReport {
 		err = generateCSVReport(sortedAlerts, scope, true)
@@ -125,6 +119,7 @@ func runVerify(cmd *cobra.Command, args []string) (err error) {
 			return err
 		}
 	}
+
 	// optionally create an issue for each repository that contains at least one valid secret alert:
 	if createIssues {
 		err = createIssuesForValidAlerts(verifiedAlerts)
@@ -133,5 +128,5 @@ func runVerify(cmd *cobra.Command, args []string) (err error) {
 			return err
 		}
 	}
-	return err
+	return
 }
